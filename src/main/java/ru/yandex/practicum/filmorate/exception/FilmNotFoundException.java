@@ -1,11 +1,11 @@
-package ru.yandex.practicum.filmorate.controller;
+package ru.yandex.practicum.filmorate.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ResponseStatus(value = HttpStatus.NOT_FOUND)
-public class UserNotFoundException extends Exception {
-    public UserNotFoundException(String msg) {
+public class FilmNotFoundException extends Exception {
+    public FilmNotFoundException(String msg) {
         super(msg);
     }
 }
