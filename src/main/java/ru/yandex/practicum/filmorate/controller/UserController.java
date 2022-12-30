@@ -1,57 +1,70 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.UserService;
 
 import javax.validation.Valid;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 @RestController
 @Slf4j
 @RequestMapping("/users")
 public class UserController {
-    private Map<Integer, User> users = new HashMap<>();
-    private int counter = 1;
+    private final UserService userService;
+
+    @Autowired
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     @PostMapping
-    private User create(@Valid @RequestBody User user) throws ValidationException {
-        validate(user);
-
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-        }
-
-        user.setId(counter);
-        users.put(user.getId(), user);
-        counter++;
-        return user;
+    private User create(@Valid @RequestBody User user, BindingResult errors) throws ValidationException {
+        return userService.create(user, errors);
     }
 
     @PutMapping
-    private User update(@Valid @RequestBody User user) throws UserNotFoundException, ValidationException {
-        if (!users.containsKey(user.getId())) {
-            log.warn("Пользователь с id = " + user.getId() + " не найден!");
-            throw new UserNotFoundException("Пользователь с id = " + user.getId() + " не найден!");
-        }
-        validate(user);
-        users.put(user.getId(), user);
-        return user;
+    private User update(@Valid @RequestBody User user,
+                        BindingResult errors) throws UserNotFoundException, ValidationException {
+        return userService.update(user, errors);
     }
 
     @GetMapping
     private Collection<User> findAll() {
-        return users.values();
+        return userService.findAll();
     }
 
-    private void validate(User user) throws ValidationException {
-        if (user.getLogin().contains(" ")) {
-            log.warn("Логин указан некорректно!");
-            throw new ValidationException("Логин указан некорректно!");
-        }
+    @GetMapping("/{id}")
+    private User find(@PathVariable(name = "id") Long id) throws UserNotFoundException {
+        return userService.find(id);
+    }
+
+    @PutMapping("/{id}/friends/{friendId}")
+    private void addFriend(@PathVariable(name = "id") Long id,
+                           @PathVariable(name = "friendId") Long friendId) throws UserNotFoundException {
+        userService.addFriend(id, friendId);
+    }
+
+    @DeleteMapping("/{id}/friends/{friendId}")
+    private void removeFriend(@PathVariable(name = "id") Long id,
+                              @PathVariable(name = "friendId") Long friendId) throws UserNotFoundException {
+        userService.removeFriend(id, friendId);
+    }
+
+    @GetMapping("/{id}/friends")
+    private List<User> findFriends(@PathVariable(name = "id") Long id) throws UserNotFoundException {
+        return userService.findFriends(id);
+    }
+
+    @GetMapping("/{id}/friends/common/{otherId}")
+    private List<User> findCommonFriends(@PathVariable("id") Long id,
+                                         @PathVariable("otherId") Long otherId) throws UserNotFoundException {
+        return userService.findCommonFriends(id, otherId);
     }
 }
