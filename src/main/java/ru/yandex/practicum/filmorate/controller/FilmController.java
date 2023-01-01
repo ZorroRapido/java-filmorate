@@ -1,58 +1,68 @@
 package ru.yandex.practicum.filmorate.controller;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.service.FilmService;
 
 import javax.validation.Valid;
-import java.time.LocalDate;
-import java.time.Month;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
-@RestController
 @Slf4j
+@RestController
 @RequestMapping("/films")
+@RequiredArgsConstructor
 public class FilmController {
-    private Map<Integer, Film> films = new HashMap<>();
-    private int counter = 1;
+    private final FilmService filmService;
 
     @PostMapping
-    private Film create(@Valid @RequestBody Film film) throws ValidationException {
-        validate(film);
-        film.setId(counter);
-        films.put(film.getId(), film);
-        counter++;
-        return film;
+    private Film create(@Valid @RequestBody Film film, BindingResult errors) throws ValidationException {
+        return filmService.create(film, errors);
     }
 
     @PutMapping
-    private Film update(@Valid @RequestBody Film film) throws ValidationException, FilmNotFoundException {
-        if (!films.containsKey(film.getId())) {
-            log.warn("Фильм с id = " + film.getId() + " не найден!");
-            throw new FilmNotFoundException("Фильм с id = " + film.getId() + " не найден!");
-        }
-        validate(film);
-        films.put(film.getId(), film);
-        return film;
+    private Film update(@Valid @RequestBody Film film, BindingResult errors) throws ValidationException, FilmNotFoundException {
+        return filmService.update(film, errors);
     }
 
     @GetMapping
     private Collection<Film> findAll() {
-        return films.values();
+        return filmService.findAll();
     }
 
-    private void validate(Film film) throws ValidationException {
-        if (film.getDescription().length() > 200) {
-            log.warn("Превышено максимальное кол-во символов в описании!");
-            throw new ValidationException("Превышено максимальное кол-во символов в описании!");
-        }
-        if (film.getReleaseDate().isBefore(LocalDate.of(1895, Month.DECEMBER, 28))) {
-            log.warn("Указанная дата релиза раньше дня рождения кино!");
-            throw new ValidationException("Указанная дата релиза раньше дня рождения кино!");
-        }
+    @GetMapping("/{id}")
+    private Film find(@PathVariable(name = "id") Long id) throws FilmNotFoundException {
+        return filmService.find(id);
+    }
+
+    @PutMapping("/{id}/like/{userId}")
+    private void like(@PathVariable(name = "id") Long id,
+                      @PathVariable(name = "userId") Long userId) throws FilmNotFoundException, UserNotFoundException {
+        filmService.like(id, userId);
+    }
+
+    @DeleteMapping("/{id}/like/{userId}")
+    private void unlike(@PathVariable(name = "id") Long id,
+                        @PathVariable(name = "userId") Long userId) throws FilmNotFoundException, UserNotFoundException {
+        filmService.unlike(id, userId);
+    }
+
+    @GetMapping("/popular")
+    private List<Film> findMostPopular(@RequestParam(name = "count", defaultValue = "10") int count) {
+        return filmService.findMostPopular(count);
     }
 }
