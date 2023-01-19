@@ -17,6 +17,7 @@ import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -62,7 +63,7 @@ public class UserController {
 
     @GetMapping("/{id}/friends")
     private List<User> findFriends(@PathVariable(name = "id") Long id) throws UserNotFoundException {
-        return userService.findFriends(id);
+        return new ArrayList<>(userService.findFriends(id));
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")

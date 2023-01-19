@@ -1,16 +1,24 @@
 package ru.yandex.practicum.filmorate.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PastOrPresent;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class User {
     private Long id;
 
@@ -39,15 +47,13 @@ public class User {
         this.likedFilms = new HashSet<>();
     }
 
-    public void addFriend(Long friendId) {
-        friends.add(friendId);
-    }
+    public Map<String, Object> toMap() {
+        Map<String, Object> values = new HashMap<>();
+        values.put("email", email);
+        values.put("login", login);
+        values.put("name", name);
+        values.put("birthday", birthday);
 
-    public void addLikedFilm(Long filmId) {
-        likedFilms.add(filmId);
-    }
-
-    public void removeLikedFilm(Long filmId) {
-        likedFilms.remove(filmId);
+        return values;
     }
 }
