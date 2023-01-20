@@ -2,28 +2,34 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.Friendship;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.repository.FriendshipRepository;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
-import java.util.Set;
+import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.HashSet;
-import java.util.Collection;
+import java.util.LinkedHashSet;
 
 @Service
 @Slf4j
 public class UserService {
     private final UserStorage userStorage;
+    private final FriendshipRepository friendshipRepository;
 
     @Autowired
-    public UserService(UserStorage userStorage) {
+    public UserService(@Qualifier("userDbStorage") UserStorage userStorage, FriendshipRepository friendshipRepository) {
         this.userStorage = userStorage;
+        this.friendshipRepository = friendshipRepository;
     }
 
     public User create(User user, BindingResult errors) throws ValidationException {
@@ -54,24 +60,41 @@ public class UserService {
 
     public void addFriend(Long id, Long friendId) throws UserNotFoundException {
         if (userStorage.getAll().containsKey(friendId)) {
-            find(id).addFriend(friendId);
-            find(friendId).addFriend(id);
+            friendshipRepository.save(Friendship.builder()
+                    .id(id)
+                    .friendId(friendId)
+                    .status("неподтвержденная")
+                    .build());
+
+            if (friendshipRepository.exists(friendId, id)) {
+                friendshipRepository.update(Friendship.builder()
+                        .id(id)
+                        .friendId(friendId)
+                        .status("подтвержденная")
+                        .build());
+
+                friendshipRepository.update(Friendship.builder()
+                        .id(friendId)
+                        .friendId(id)
+                        .status("подтвержденная")
+                        .build());
+            }
         } else {
             log.warn("Пользователь с id = " + friendId + " не найден!");
             throw new UserNotFoundException("Пользователь с id = " + friendId + " не найден!");
         }
     }
 
-    public void removeFriend(Long id, Long friendId) throws UserNotFoundException {
-        find(id).getFriends().remove(friendId);
-        find(id).getFriends().remove(id);
+    public void removeFriend(Long id, Long friendId) {
+        friendshipRepository.delete(id, friendId);
     }
 
-    public List<User> findFriends(Long id) throws UserNotFoundException {
-        List<User> friends = new ArrayList<>();
+    public Set<User> findFriends(Long id) throws UserNotFoundException {
+        Set<User> friends = new LinkedHashSet<>();
+        Set<Long> friendsIds = friendshipRepository.findFriendsIds(id);
 
-        for (Long friendId : find(id).getFriends()) {
-            friends.add(find(friendId));
+        for (Long friendId : friendsIds) {
+            friends.add(userStorage.get(friendId));
         }
 
         return friends;
