@@ -25,7 +25,11 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public User update(User user) {
-        return usersRepository.update(user);
+        if (usersRepository.exists(user.getId())) {
+            return usersRepository.update(user);
+        } else {
+            throw new UserNotFoundException("Пользователь с id = " + user.getId() + " не найден!");
+        }
     }
 
     @Override

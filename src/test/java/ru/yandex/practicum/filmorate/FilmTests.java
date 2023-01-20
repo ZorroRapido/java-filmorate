@@ -1,23 +1,19 @@
 package ru.yandex.practicum.filmorate;
 
 import lombok.RequiredArgsConstructor;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
-import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Mpa;
-import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.FilmDbStorage;
-import ru.yandex.practicum.filmorate.storage.UserDbStorage;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Collection;
+import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -27,91 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @AutoConfigureTestDatabase
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
-class FilmoRateApplicationTests {
-    private final UserDbStorage userStorage;
+class FilmTests {
     private final FilmDbStorage filmStorage;
 
     @Test
-    public void testCreateAndGetUser() throws UserNotFoundException {
-        User testUser = createUser();
-
-        userStorage.create(testUser);
-        Optional<User> userOptional = Optional.ofNullable(userStorage.get(testUser.getId()));
-
-        assertThat(userOptional)
-                .isPresent()
-                .hasValueSatisfying(user -> {
-                            assertThat(user).hasFieldOrPropertyWithValue("id", testUser.getId());
-                            assertThat(user).hasFieldOrPropertyWithValue("login", testUser.getLogin());
-                            assertThat(user).hasFieldOrPropertyWithValue("name", testUser.getName());
-                            assertThat(user).hasFieldOrPropertyWithValue("email", testUser.getEmail());
-                            assertThat(user).hasFieldOrPropertyWithValue("birthday", testUser.getBirthday());
-                        }
-                );
-    }
-
-    @Test
-    public void testUpdateUser() throws UserNotFoundException {
-        User testUser = createUser();
-        userStorage.create(testUser);
-
-        testUser.setLogin("doloreUpdate");
-        testUser.setName("doloreUpdate");
-        testUser.setEmail("mail@yandex.ru");
-        testUser.setBirthday(LocalDate.of(1976, 9, 20));
-
-        userStorage.update(testUser);
-
-        Optional<User> userOptional = Optional.ofNullable(userStorage.get(testUser.getId()));
-
-        assertThat(userOptional)
-                .isPresent()
-                .hasValueSatisfying(user -> {
-                            assertThat(user).hasFieldOrPropertyWithValue("id", testUser.getId());
-                            assertThat(user).hasFieldOrPropertyWithValue("login", testUser.getLogin());
-                            assertThat(user).hasFieldOrPropertyWithValue("name", testUser.getName());
-                            assertThat(user).hasFieldOrPropertyWithValue("email", testUser.getEmail());
-                            assertThat(user).hasFieldOrPropertyWithValue("birthday", testUser.getBirthday());
-                        }
-                );
-    }
-
-    @Test
-    public void testDeleteUser() throws UserNotFoundException {
-        User testUser = createUser();
-        userStorage.create(testUser);
-
-        userStorage.delete(testUser);
-
-        String expectedErrorMessage = "Пользователь с id = " + testUser.getId() + " не найден!";
-        Exception exception = assertThrows(UserNotFoundException.class, () -> userStorage.get(testUser.getId()));
-        assertThat(exception.getMessage())
-                .isEqualTo(expectedErrorMessage);
-    }
-
-    @Test
-    public void testGetAllUsers() {
-        User testUser1 = createUser();
-        User testUser2 = createUser();
-
-        testUser2.setLogin("dolore2");
-        testUser2.setName("Nick Name2");
-
-        userStorage.create(testUser1);
-        userStorage.create(testUser2);
-
-        Collection<User> users = userStorage.getAll().values();
-
-        assertAll(
-                () -> assertThat(users.size()).isEqualTo(2),
-                () -> assertThat(testUser1).isIn(users),
-                () -> assertThat(testUser2).isIn(users)
-        );
-    }
-
-    @Test
-    public void testCreateAndGetFilm() throws FilmNotFoundException {
-        Film testFilm = createFilm();
+    public void testGetFilmPositiveCase() throws FilmNotFoundException {
+        Film testFilm = buildFilm();
 
         filmStorage.create(testFilm);
         Optional<Film> filmOptional = Optional.ofNullable(filmStorage.get(testFilm.getId()));
@@ -131,8 +48,18 @@ class FilmoRateApplicationTests {
     }
 
     @Test
-    public void testUpdateFilm() throws FilmNotFoundException {
-        Film testFilm = createFilm();
+    public void testGetNonexistentFilm() throws FilmNotFoundException {
+        Long id = 1L;
+
+        String expectedErrorMessage = "Фильм с id = " + id + " не найден!";
+        Exception exception = assertThrows(FilmNotFoundException.class, () -> filmStorage.get(id));
+        assertThat(exception.getMessage())
+                .isEqualTo(expectedErrorMessage);
+    }
+
+    @Test
+    public void testUpdateFilmPositiveCase() throws FilmNotFoundException {
+        Film testFilm = buildFilm();
         filmStorage.create(testFilm);
 
         testFilm.setName("Film Updated");
@@ -160,8 +87,21 @@ class FilmoRateApplicationTests {
     }
 
     @Test
+    public void testUpdateNonexistentFilm() {
+        Long id = 1L;
+
+        Film updatedFilm = buildFilm();
+        updatedFilm.setId(id);
+
+        String expectedErrorMessage = "Фильм с id = " + id + " не найден!";
+        Exception exception = assertThrows(FilmNotFoundException.class, () -> filmStorage.update(updatedFilm));
+        assertThat(exception.getMessage())
+                .isEqualTo(expectedErrorMessage);
+    }
+
+    @Test
     public void testDeleteFilm() throws FilmNotFoundException {
-        Film testFilm = createFilm();
+        Film testFilm = buildFilm();
         filmStorage.create(testFilm);
 
         filmStorage.delete(testFilm.getId());
@@ -173,9 +113,9 @@ class FilmoRateApplicationTests {
     }
 
     @Test
-    public void testGetAllFilms() {
-        Film testFilm1 = createFilm();
-        Film testFilm2 = createFilm();
+    public void testGetAllFilmsPositiveCase() {
+        Film testFilm1 = buildFilm();
+        Film testFilm2 = buildFilm();
 
         testFilm2.setName("New film");
         testFilm2.setDescription("New film about friends");
@@ -192,19 +132,15 @@ class FilmoRateApplicationTests {
         );
     }
 
+    @Test
+    public void testGetAllFilmsEmptyList() {
+        Collection<Film> films = filmStorage.getAll().values();
 
-    private User createUser() {
-        return User.builder()
-                .login("dolore")
-                .name("Nick Name")
-                .email("mail@mail.ru")
-                .friends(new HashSet<>())
-                .likedFilms(new HashSet<>())
-                .birthday(LocalDate.of(1946, 8, 20))
-                .build();
+        assertThat(films.size())
+                .isEqualTo(0);
     }
 
-    private Film createFilm() {
+    private Film buildFilm() {
         return Film.builder()
                 .name("nisi eiusmod")
                 .description("adipisicing")

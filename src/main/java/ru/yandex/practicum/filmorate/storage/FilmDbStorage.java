@@ -25,7 +25,11 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film update(Film film) throws FilmNotFoundException {
-        return filmsRepository.update(film);
+        if (filmsRepository.exists(film.getId())) {
+            return filmsRepository.update(film);
+        } else {
+            throw new FilmNotFoundException("Фильм с id = " + film.getId() + " не найден!");
+        }
     }
 
     public void delete(Long id) {

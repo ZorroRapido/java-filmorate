@@ -31,7 +31,7 @@ public class GenreRepository {
     public boolean exists(Long id) {
         String sql = "select exists(select 1 from genres where id = ?)";
 
-        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, new Object[]{ id }, Boolean.class));
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, new Object[]{id}, Boolean.class));
     }
 
     public List<Genre> findAll() {

@@ -36,7 +36,7 @@ public class MpaRepository {
     public boolean exists(Long id) {
         String sql = "select exists(select 1 from mpa where id = ?)";
 
-        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, new Object[]{ id }, Boolean.class));
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(sql, new Object[]{id}, Boolean.class));
     }
 
     public List<Mpa> findAll() {
